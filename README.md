@@ -2,12 +2,28 @@
 
 [![Status](https://img.shields.io/badge/status-experimental-orange)](#current-status)
 [![Tested on Zorin OS](https://img.shields.io/badge/tested%20on-Zorin%20OS-blue)](docs/tested-host.md)
-[![Kernel](https://img.shields.io/badge/kernel-7.0.14--x64v3--xanmod1-informational)](docs/tested-host.md)
+[![Kernel](https://img.shields.io/badge/kernel-6.x%2B-informational)](docs/tested-host.md)
 [![open-fprintd](https://img.shields.io/badge/fingerprint-open--fprintd-success)](https://github.com/uunicorn/open-fprintd)
 [![License](https://img.shields.io/badge/license-GPL--2.0%20%2B%20LGPL--2.1-lightgrey)](#license)
 
 Linux integration for the Goodix `GXFP5130` press fingerprint sensor, validated
 on a Huawei MateBook X Pro 2024.
+
+## Table Of Contents
+
+- [Current Status](#current-status)
+- [Tested Hardware](#tested-hardware)
+- [Why This Repository Exists](#why-this-repository-exists)
+- [Upstream Comparison](#upstream-comparison)
+- [What Is Included, And Why](#what-is-included-and-why)
+- [Install Outline](#install-outline)
+- [Debugging](#debugging)
+- [Provisioning And PSK](#provisioning-and-psk)
+- [Security Notes](#security-notes)
+- [Contributing](#contributing)
+- [Credits](#credits)
+- [License](#license)
+- [Current Limitations](#current-limitations)
 
 This repository turns the current GXFP5130 reverse-engineering pieces into a
 working Linux fingerprint stack:
@@ -19,19 +35,6 @@ GXFP5130 sensor -> gxfp kernel module -> gxfpmoc capture helper
 ```
 
 ## Current Status
-
-Validated on one real machine:
-
-| Item | Tested value |
-| --- | --- |
-| Laptop | Huawei MateBook X Pro 2024 |
-| Sensor ACPI ID | `GXFP5130:00` |
-| Firmware reported by driver | `GF_GCC_EC_20068` |
-| OS | Zorin OS |
-| Kernel | `7.0.14-x64v3-xanmod1` |
-| User-facing stack | `open-fprintd`, `fprintd-*`, PAM, GDM |
-
-What worked in testing:
 
 - DKMS-managed `gxfp` kernel module for the GXFP5130 eSPI transport.
 - Goodix MOC one-shot capture helper using a reprovisioned PSK.
@@ -45,13 +48,22 @@ This is not yet a universal Linux support claim for every GXFP5130 laptop. It is
 tested support for the hardware above and a practical starting point for nearby
 Goodix GXFP5130 devices.
 
+## Tested Hardware
+
+| Laptop | Sensor ACPI ID | Firmware | OS | Kernel | Status |
+| --- | --- | --- | --- | --- | --- |
+| Huawei MateBook X Pro 2024 | `GXFP5130:00` | `GF_GCC_EC_20068` | Zorin OS | `7.0.14-x64v3-xanmod1` | enroll + verify |
+
+Got it working on different hardware? Open a PR adding a row, or open a
+compatibility report issue with the details listed in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Why This Repository Exists
 
-The upstream projects below each solve an important part of the problem, but no
-single repository provided the whole desktop-login path for this tested laptop.
-This repository packages the missing integration layer: installer glue, service
-configuration, open-fprintd backend, matcher tuning, debug workflow, and safety
-notes.
+The upstream projects below solve the kernel transport, Goodix MOC protocol,
+matching, and fprintd-compatible frontend separately. This repository packages
+the missing integration layer needed for a desktop login workflow on the tested
+GXFP5130 laptop.
 
 ## Upstream Comparison
 
@@ -88,8 +100,7 @@ Not vendored:
 
 ## Install Outline
 
-Install development dependencies first. On Debian/Ubuntu/Zorin-like systems this
-means roughly:
+Install development dependencies first. On Debian/Ubuntu/Zorin-like systems:
 
 ```bash
 sudo apt install build-essential dkms linux-headers-$(uname -r) \
@@ -176,6 +187,20 @@ repository intentionally does not include any PSK or provisioning blob.
   receive your password.
 - The installer masks stock `fprintd.service` because `open-fprintd` owns the
   same `net.reactivated.Fprint` D-Bus name.
+
+## Contributing
+
+Hardware compatibility reports are especially useful. Please include:
+
+- laptop model and BIOS/firmware version when available
+- sensor ACPI ID, for example from `journalctl -k -b | grep -i GXFP`
+- kernel version from `uname -a`
+- OS/distribution
+- whether capture, enroll and verify work
+- relevant logs with PSKs, blobs, traces and raw captures removed
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full checklist and safety
+rules.
 
 ## Credits
 

@@ -208,9 +208,10 @@ Hardware compatibility reports are especially useful. Please include:
 
 - laptop model and BIOS/firmware version when available
 - sensor ACPI ID, for example from `journalctl -k -b | grep -i GXFP`
+- firmware string reported by `gxfp`, if available
 - kernel version from `uname -a`
 - OS/distribution
-- whether capture, enroll and verify work
+- whether `gxfp` loads, capture, enroll and verify work
 - relevant logs with PSKs, blobs, traces and raw captures removed
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full checklist and safety

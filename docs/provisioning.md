@@ -71,6 +71,11 @@ sudo chown "$USER:$USER" \
 chmod 0600 gxfp-backup/bb010002-before.bin gxfp-backup/bb010003-before.bin
 ```
 
+These dump commands do not require a valid PSK or TLS session. They use the
+device's preset-PSK read command directly. If they still fail, stop and debug
+the kernel/device transport before writing new provisioning state unless you
+intentionally accept not having a restore blob.
+
 Keep those files private. They are useful for analysis and may be needed if you
 want to restore the previous sensor state.
 
@@ -104,6 +109,9 @@ If capture fails with `SSL - Verification of the message MAC failed`, the PSK
 does not match the current sensor state.
 
 ## Option A: recover the Windows Goodix cache PSK
+
+Skip this section if the machine never had Windows fingerprint enrollment. Go
+straight to [Option B](#option-b-invasive-reprovisioning).
 
 On systems that previously used Windows fingerprint login, the matching PSK may
 be recoverable from the Windows Goodix cache. This is the preferred path when it
@@ -183,18 +191,14 @@ fprintd-enroll -f right-index-finger "$USER"
 
 ## Tested PSK location
 
-The backend service expects:
+Quick reference: the backend service expects the active raw PSK at:
 
 ```text
 /var/lib/open-fprintd/gxfp/psk-new-raw32.bin
 ```
 
-The file should be root-only:
-
-```bash
-sudo install -d -m 0700 /var/lib/open-fprintd/gxfp
-sudo install -m 0600 psk-new-raw32.bin /var/lib/open-fprintd/gxfp/psk-new-raw32.bin
-```
+See [Step 2](#step-2-try-an-existing-psk-first) or
+[Option B](#option-b-invasive-reprovisioning) for the install command.
 
 ## Restore notes
 

@@ -1,8 +1,8 @@
 # GXFP5130 Linux fingerprint sensor support
 
 [![Status](https://img.shields.io/badge/status-experimental-orange)](#current-status)
-[![Tested on Zorin OS](https://img.shields.io/badge/tested%20on-Zorin%20OS-blue)](docs/tested-host.md)
-[![Kernel](https://img.shields.io/badge/kernel-6.x%2B-informational)](docs/tested-host.md)
+[![Tested on Zorin OS 18.1](https://img.shields.io/badge/tested%20on-Zorin%20OS%2018.1-blue)](docs/tested-host.md)
+[![Kernel](https://img.shields.io/badge/kernel-7.0.14-informational)](docs/tested-host.md)
 [![open-fprintd](https://img.shields.io/badge/fingerprint-open--fprintd-success)](https://github.com/uunicorn/open-fprintd)
 [![License](https://img.shields.io/badge/license-GPL--2.0%20%2B%20LGPL--2.1-lightgrey)](#license)
 
@@ -52,7 +52,7 @@ Goodix GXFP5130 devices.
 
 | Laptop | Sensor ACPI ID | Firmware | OS | Kernel | Status |
 | --- | --- | --- | --- | --- | --- |
-| Huawei MateBook X Pro 2024 | `GXFP5130:00` | `GF_GCC_EC_20068` | Zorin OS | `7.0.14-x64v3-xanmod1` | enroll + verify |
+| Huawei MateBook X Pro 2024 | `GXFP5130:00` | `GF_GCC_EC_20068` | Zorin OS 18.1 | `7.0.14` | enroll + verify |
 
 Got it working on different hardware? Open a PR adding a row, or open a
 compatibility report issue with the details listed in
@@ -71,7 +71,6 @@ GXFP5130 laptop.
 | --- | --- | --- |
 | [`Void755/gxfp_linux_driver`](https://github.com/Void755/gxfp_linux_driver) | Kernel-side GXFP5130 eSPI transport and `/dev/gxfp` interface. | DKMS install glue, boot integration, service dependency wiring, and docs for the tested desktop stack. |
 | [`Void755/gxfpmoc`](https://github.com/Void755/gxfpmoc) | Goodix MOC protocol, TLS/PSK session handling, provisioning, recovery and capture primitives. | A patch adding a one-shot capture helper for daemon use plus mbedTLS compatibility fixes used by this integration. |
-| [`Void755/gxfp_linux_driver` issue #1](https://github.com/Void755/gxfp_linux_driver/issues/1) | Community reverse-engineering discussion around GXFP5130 behavior. | A reproducible end-to-end setup tested on a Huawei MateBook X Pro 2024. |
 | [`AlexDaichendt/sil6250-linux`](https://github.com/AlexDaichendt/sil6250-linux/tree/main) | SIL6250 Linux work, reverse-engineering notes, and an LGPL matcher implementation. | Reuses the matcher crate for GXFP 80x64 captures and tunes enrollment/verification thresholds for this sensor path. |
 | [`uunicorn/open-fprintd`](https://github.com/uunicorn/open-fprintd) | fprintd-compatible D-Bus frontend for standalone backend daemons. | A GXFP5130-specific backend daemon that registers with open-fprintd and stores extracted features. |
 
@@ -211,8 +210,6 @@ This integration stands on top of work from:
 - [Void755/gxfpmoc](https://github.com/Void755/gxfpmoc) for the Goodix MOC
   userspace protocol, TLS/PSK session handling, provisioning, recovery and
   capture work.
-- [Void755/gxfp_linux_driver issue #1](https://github.com/Void755/gxfp_linux_driver/issues/1)
-  for public discussion and clues around GXFP5130 behavior.
 - [AlexDaichendt/sil6250-linux](https://github.com/AlexDaichendt/sil6250-linux/tree/main)
   for the matcher and reverse-engineering notes that made local matching
   practical.

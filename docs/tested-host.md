@@ -5,8 +5,8 @@ The current integration was validated on:
 - Hardware: Huawei MateBook X Pro 2024
 - ACPI device: `GXFP5130:00`
 - Firmware string reported by driver: `GF_GCC_EC_20068`
-- OS: Zorin OS
-- Kernel: `7.0.14-x64v3-xanmod1`
+- OS: Zorin OS 18.1, Ubuntu-based
+- Kernel: `7.0.14`
 - Driver mode: DKMS `gxfp/0.1.0`
 - Fingerprint stack: `open-fprintd` backend exposed through `fprintd-*`, PAM,
   GNOME Settings and GDM.

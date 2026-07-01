@@ -29,11 +29,9 @@ Prefer this order:
 
 ## Private files
 
-Keep all generated PSKs, `bb010002`/`bb010003` blobs, logs, traces, and raw
-captures under `gxfp-backup/` or `gxfp-reprovision/`. These paths are ignored by
-Git in this repository.
-
-Never publish these files in issues, pull requests, screenshots or logs.
+Never publish generated PSKs, `bb010002`/`bb010003` blobs, logs, traces or raw
+captures in issues, pull requests, screenshots or public logs. Treat them as
+private, machine-specific material.
 
 ## Prerequisites
 

@@ -45,8 +45,8 @@ GXFP5130 sensor -> gxfp kernel module -> gxfpmoc capture helper
 - Verified behavior: enrolled right index matched; another finger did not.
 
 This is not yet a universal Linux support claim for every GXFP5130 laptop. It is
-tested support for the hardware above and a practical starting point for nearby
-Goodix GXFP5130 devices.
+tested support for the hardware listed in [Tested Hardware](#tested-hardware)
+and a practical starting point for nearby Goodix GXFP5130 devices.
 
 ## Tested Hardware
 
@@ -63,7 +63,8 @@ compatibility report issue with the details listed in
 The upstream projects below solve the kernel transport, Goodix MOC protocol,
 matching, and fprintd-compatible frontend separately. This repository packages
 the missing integration layer needed for a desktop login workflow on the tested
-GXFP5130 laptop.
+GXFP5130 laptop. Background discussion and early GXFP5130 clues are available in
+[`Void755/gxfp_linux_driver` issue #1](https://github.com/Void755/gxfp_linux_driver/issues/1).
 
 ## Upstream Comparison
 

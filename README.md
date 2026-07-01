@@ -135,7 +135,8 @@ Make sure your PSK exists at:
 ```
 
 If you do not have one yet, see [Provisioning And PSK](#provisioning-and-psk).
-Most laptops need a one-time PSK reprovisioning before capture works.
+Try recovering an existing PSK first when possible. Invasive reprovisioning is
+the fallback because it writes persistent sensor state.
 
 Then enroll:
 
@@ -184,8 +185,10 @@ Linux capture started working only after invasive reprovisioning with a new PSK.
 That may invalidate Windows-side fingerprint enrollment and can require
 re-enrollment in Windows.
 
-Provisioning notes live in [`docs/provisioning.md`](docs/provisioning.md). See
-[Security Notes](#security-notes) for what must stay private.
+Provisioning notes live in [`docs/provisioning.md`](docs/provisioning.md).
+Read that guide in full before running any provisioning step. Try recovering an
+existing PSK first; invasive reprovisioning is destructive and machine-specific.
+See [Security Notes](#security-notes) for what must stay private.
 
 ## Security Notes
 

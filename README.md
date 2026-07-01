@@ -1,39 +1,92 @@
-# GXFP5130 Linux fingerprint support
+# GXFP5130 Linux fingerprint sensor support
 
-Experimental Linux support for the Goodix `GXFP5130` press fingerprint sensor
-found in at least one Huawei MateBook X Pro 2024 configuration.
+[![Status](https://img.shields.io/badge/status-experimental-orange)](#current-status)
+[![Tested on Zorin OS](https://img.shields.io/badge/tested%20on-Zorin%20OS-blue)](docs/tested-host.md)
+[![Kernel](https://img.shields.io/badge/kernel-7.0.14--x64v3--xanmod1-informational)](docs/tested-host.md)
+[![open-fprintd](https://img.shields.io/badge/fingerprint-open--fprintd-success)](https://github.com/uunicorn/open-fprintd)
+[![License](https://img.shields.io/badge/license-GPL--2.0%20%2B%20LGPL--2.1-lightgrey)](#license)
 
-This repository packages the integration we validated on:
+Linux integration for the Goodix `GXFP5130` press fingerprint sensor, validated
+on a Huawei MateBook X Pro 2024.
 
-- laptop: Huawei MateBook X Pro 2024
-- ACPI device: `GXFP5130:00`
-- OS: Zorin OS
-- kernel tested: `7.0.14-x64v3-xanmod1`
-- user-facing stack: `open-fprintd` + PAM/GDM through `fprintd-*`
+This repository turns the current GXFP5130 reverse-engineering pieces into a
+working Linux fingerprint stack:
 
-It is not yet a universal Linux driver claim. Treat it as tested support for
-this hardware class and a starting point for nearby Goodix GXFP5130 devices.
+```text
+GXFP5130 sensor -> gxfp kernel module -> gxfpmoc capture helper
+               -> gxfp-openfprintd backend -> open-fprintd
+               -> fprintd CLI / GNOME Settings / PAM / GDM
+```
 
-## What works on the tested machine
+## Current Status
+
+Validated on one real machine:
+
+| Item | Tested value |
+| --- | --- |
+| Laptop | Huawei MateBook X Pro 2024 |
+| Sensor ACPI ID | `GXFP5130:00` |
+| Firmware reported by driver | `GF_GCC_EC_20068` |
+| OS | Zorin OS |
+| Kernel | `7.0.14-x64v3-xanmod1` |
+| User-facing stack | `open-fprintd`, `fprintd-*`, PAM, GDM |
+
+What worked in testing:
 
 - DKMS-managed `gxfp` kernel module for the GXFP5130 eSPI transport.
-- Goodix MOC capture helper using a reprovisioned PSK.
-- `open-fprintd` backend daemon exposing the sensor to `fprintd-list`,
-  `fprintd-enroll`, `fprintd-verify`, GNOME Settings, PAM and GDM.
-- Enrollment and verification with extracted minutiae, not raw-image storage.
+- Goodix MOC one-shot capture helper using a reprovisioned PSK.
+- `open-fprintd` backend visible through `fprintd-list`, `fprintd-enroll`,
+  `fprintd-verify`, GNOME Settings, PAM and GDM.
+- Enrollment and verification using extracted matcher features, not raw image
+  storage.
 - Verified behavior: enrolled right index matched; another finger did not.
 
-## Repository layout
+This is not yet a universal Linux support claim for every GXFP5130 laptop. It is
+tested support for the hardware above and a practical starting point for nearby
+Goodix GXFP5130 devices.
 
-- `openfprintd-backend/` - Rust backend daemon for `open-fprintd`.
-- `crates/sil6250/` - LGPL-2.1 matcher crate reused from `sil6250-linux`.
-- `patches/` - patch applied to `Void755/gxfpmoc` for this integration.
-- `scripts/` - fetch/install helpers and DKMS/service glue.
+## Why This Repository Exists
+
+The upstream projects below each solve an important part of the problem, but no
+single repository provided the whole desktop-login path for this tested laptop.
+This repository packages the missing integration layer: installer glue, service
+configuration, open-fprintd backend, matcher tuning, debug workflow, and safety
+notes.
+
+## Upstream Comparison
+
+| Project | What it provides | What this repo adds |
+| --- | --- | --- |
+| [`Void755/gxfp_linux_driver`](https://github.com/Void755/gxfp_linux_driver) | Kernel-side GXFP5130 eSPI transport and `/dev/gxfp` interface. | DKMS install glue, boot integration, service dependency wiring, and docs for the tested desktop stack. |
+| [`Void755/gxfpmoc`](https://github.com/Void755/gxfpmoc) | Goodix MOC protocol, TLS/PSK session handling, provisioning, recovery and capture primitives. | A patch adding a one-shot capture helper for daemon use plus mbedTLS compatibility fixes used by this integration. |
+| [`Void755/gxfp_linux_driver` issue #1](https://github.com/Void755/gxfp_linux_driver/issues/1) | Community reverse-engineering discussion around GXFP5130 behavior. | A reproducible end-to-end setup tested on a Huawei MateBook X Pro 2024. |
+| [`AlexDaichendt/sil6250-linux`](https://github.com/AlexDaichendt/sil6250-linux/tree/main) | SIL6250 Linux work, reverse-engineering notes, and an LGPL matcher implementation. | Reuses the matcher crate for GXFP 80x64 captures and tunes enrollment/verification thresholds for this sensor path. |
+| [`uunicorn/open-fprintd`](https://github.com/uunicorn/open-fprintd) | fprintd-compatible D-Bus frontend for standalone backend daemons. | A GXFP5130-specific backend daemon that registers with open-fprintd and stores extracted features. |
+
+## What Is Included, And Why
+
+This repository intentionally does not vendor everything.
+
+Included:
+
+- `openfprintd-backend/` - the GXFP5130 backend daemon written for this setup.
+- `crates/sil6250/` - the LGPL-2.1 matcher crate needed to build the backend.
+- `patches/` - the small patch applied to `Void755/gxfpmoc`.
+- `scripts/` - fetch/install helpers, DKMS config and service glue.
 - `systemd/` - backend service unit.
-- `docs/` - debugging and provisioning notes.
-- `gxfp-backup/`, `gxfp-reprovision/` - local-only private material directories.
+- `docs/` - provisioning, debug and tested-host notes.
+- `gxfp-backup/`, `gxfp-reprovision/` - local-only directories for private
+  material; their contents are ignored by Git.
 
-## Install outline
+Not vendored:
+
+- Full `gxfp_linux_driver` and `gxfpmoc` source trees. The installer fetches
+  pinned upstream revisions instead. This keeps provenance clear and avoids
+  republishing large upstream code without complete top-level licensing context.
+- Any PSK, factory blob, trace, provisioning log, raw PGM capture or enrolled
+  template.
+
+## Install Outline
 
 Install development dependencies first. On Debian/Ubuntu/Zorin-like systems this
 means roughly:
@@ -50,7 +103,7 @@ Fetch pinned upstreams and apply the local `gxfpmoc` patch:
 ./scripts/fetch-upstreams.sh
 ```
 
-Install kernel module, helpers, `open-fprintd`, backend daemon and services:
+Install the kernel module, helpers, `open-fprintd`, backend daemon and services:
 
 ```bash
 sudo ./scripts/install.sh
@@ -74,12 +127,51 @@ And verify:
 fprintd-verify -f right-index-finger "$USER"
 ```
 
-## Security notes
+## Debugging
 
-- Do not publish PSKs, factory blobs, trace files, logs from provisioning, or
-  raw PGM captures.
-- `GXFP_DEBUG_CAPTURE_DIR` intentionally saves raw fingerprint images. Use it
-  only temporarily with a root-only directory and delete captures afterward.
+Useful first checks:
+
+```bash
+systemctl status open-fprintd.service gxfp-openfprintd.service --no-pager
+fprintd-list "$USER"
+journalctl -u gxfp-openfprintd.service -u open-fprintd.service -n 80 --no-pager
+journalctl -k -b --no-pager | grep -Ei 'gxfp|GXFP5130|finger|goodix'
+```
+
+The backend supports opt-in raw capture diagnostics:
+
+```ini
+Environment=GXFP_DEBUG_CAPTURE_DIR=/root/gxfp-debug-captures
+```
+
+Only enable this temporarily. It saves raw fingerprint images, which are
+biometric data. Use a root-only directory and delete captures after analysis.
+
+More detail: [`docs/debugging.md`](docs/debugging.md).
+
+## Provisioning And PSK
+
+On the tested machine, the factory/current PSK did not authenticate and capture
+failed with:
+
+```text
+SSL - Verification of the message MAC failed
+```
+
+Linux capture started working only after invasive reprovisioning with a new PSK.
+That may invalidate Windows-side fingerprint enrollment and can require
+re-enrollment in Windows.
+
+Provisioning notes live in [`docs/provisioning.md`](docs/provisioning.md). This
+repository intentionally does not include any PSK or provisioning blob.
+
+## Security Notes
+
+- Do not publish PSKs, factory blobs, trace files, provisioning logs, raw PGM
+  captures or enrolled templates.
+- `gxfp-backup/` and `gxfp-reprovision/` are present for local convenience, but
+  their contents are ignored by Git.
+- `GXFP_DEBUG_CAPTURE_DIR` saves biometric raw images. Use it only briefly.
 - Fingerprint login usually cannot unlock the GNOME keyring because PAM did not
   receive your password.
 - The installer masks stock `fprintd.service` because `open-fprintd` owns the
@@ -87,22 +179,35 @@ fprintd-verify -f right-index-finger "$USER"
 
 ## Credits
 
-This integration would not exist without:
+This integration stands on top of work from:
 
-- Void755 for `gxfp_linux_driver` and `gxfpmoc`.
-- The `gxfp_linux_driver` issue discussion that documented the GXFP5130 path.
-- AlexDaichendt for `sil6250-linux`, whose matcher and reverse-engineering notes
-  made the local matching path practical.
-- uunicorn for `open-fprintd`, which makes out-of-tree backends possible without
-  forking the whole fprintd/libfprint stack.
+- [Void755/gxfp_linux_driver](https://github.com/Void755/gxfp_linux_driver) for
+  the GXFP5130 Linux kernel transport.
+- [Void755/gxfpmoc](https://github.com/Void755/gxfpmoc) for the Goodix MOC
+  userspace protocol, TLS/PSK session handling, provisioning, recovery and
+  capture work.
+- [Void755/gxfp_linux_driver issue #1](https://github.com/Void755/gxfp_linux_driver/issues/1)
+  for public discussion and clues around GXFP5130 behavior.
+- [AlexDaichendt/sil6250-linux](https://github.com/AlexDaichendt/sil6250-linux/tree/main)
+  for the matcher and reverse-engineering notes that made local matching
+  practical.
+- [uunicorn/open-fprintd](https://github.com/uunicorn/open-fprintd) for the
+  standalone backend architecture.
 
-See `UPSTREAMS.md` for pinned revisions and license notes.
+Pinned revisions and license notes: [`UPSTREAMS.md`](UPSTREAMS.md).
 
-## Current limitations
+## License
+
+Original integration code, scripts, service files and documentation in this
+repository are GPL-2.0 only. See [`LICENSES-GPL-2.0.txt`](LICENSES-GPL-2.0.txt).
+
+The vendored matcher crate under `crates/sil6250/` comes from `sil6250-linux`
+and is LGPL-2.1. See [`LICENSES-LGPL-2.1.txt`](LICENSES-LGPL-2.1.txt).
+
+## Current Limitations
 
 - Tested on one Huawei MateBook X Pro 2024 system, not a broad device matrix.
-- Some provisioning paths are intentionally documented rather than automated
-  because they are invasive.
-- Upstream `gxfp_linux_driver` and `gxfpmoc` are fetched from their original
-  repositories instead of vendored here because complete top-level licensing was
-  not visible when this package was prepared.
+- Provisioning remains intentionally manual because it changes persistent sensor
+  state.
+- `gxfp_linux_driver` and `gxfpmoc` are fetched from their original repositories
+  instead of fully vendored here to keep licensing and provenance clear.

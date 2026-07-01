@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+if ! lsmod | grep -q '^gxfp[[:space:]]'; then
+  /sbin/modprobe gxfp || true
+fi
+
+if [ ! -e /dev/gxfp ] && [ -r /sys/class/misc/gxfp/dev ]; then
+  IFS=: read -r major minor < /sys/class/misc/gxfp/dev
+  mknod -m 0600 /dev/gxfp c "$major" "$minor" || true
+fi
+
+test -e /dev/gxfp
+chown root:root /dev/gxfp
+chmod 0600 /dev/gxfp

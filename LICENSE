@@ -1,0 +1,11 @@
+This repository's original integration code, scripts, service files, and
+documentation are licensed under the GNU General Public License version 2.0
+only.
+
+See `LICENSES-GPL-2.0.txt` for the full GPL-2.0 license text.
+
+The vendored `crates/sil6250/` matcher code comes from `sil6250-linux` and is
+licensed under LGPL-2.1. See `LICENSES-LGPL-2.1.txt`.
+
+Some upstream projects used by the installer are fetched from their original
+repositories instead of being vendored here. See `UPSTREAMS.md`.

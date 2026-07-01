@@ -1,0 +1,15 @@
+GXFP5130 Linux fingerprint support
+
+This integration was assembled from reverse-engineering work and local testing
+on a Huawei MateBook X Pro 2024 with ACPI device GXFP5130:00.
+
+Credits:
+
+- Void755/gxfp_linux_driver for the GXFP5130 eSPI kernel transport.
+- Void755/gxfpmoc for Goodix MOC userspace protocol, TLS/PSK handling,
+  provisioning, recovery, and capture primitives.
+- AlexDaichendt/sil6250-linux for matcher code and reverse-engineering notes.
+- uunicorn/open-fprintd for the standalone backend architecture.
+
+No PSKs, provisioning blobs, traces, raw fingerprint images, or enrolled
+templates are included in this repository.

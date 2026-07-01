@@ -1,0 +1,43 @@
+# Build outputs
+target/
+build/
+dist/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+*.order
+*.symvers
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Local upstream clones and install workdirs
+.upstreams/
+.work/
+
+# Private sensor material. These directories are intentionally present for
+# local backups/provisioning notes, but their contents must never be published.
+gxfp-backup/*
+!gxfp-backup/README.md
+gxfp-reprovision/*
+!gxfp-reprovision/README.md
+
+# Raw biometric captures and sensor/provisioning artifacts
+*.pgm
+*.pnm
+*.raw
+*.bin
+*.trace
+*.log
+*psk*
+*PSK*
+*bb010002*
+*bb010003*
+finger*
+
+# Editor / OS noise
+.DS_Store
+*~
+*.swp

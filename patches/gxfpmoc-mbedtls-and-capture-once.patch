@@ -1,0 +1,319 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 69af512..a04c7c4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -6,8 +6,6 @@ set(CMAKE_C_STANDARD 11)
+ set(CMAKE_C_STANDARD_REQUIRED ON)
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ 
+-find_package(MbedTLS REQUIRED)
+-
+ add_library(gxfp
+ 		src/io/dev.c
+ 		src/algo/common.c
+@@ -57,6 +55,14 @@ target_link_libraries(gxfp_capture PRIVATE gxfp)
+ 
+ target_compile_options(gxfp_capture PRIVATE -Wall -Wextra -Wpedantic)
+ 
++add_executable(gxfp_capture_once
++		demos/capture_once/main.c
++)
++
++target_link_libraries(gxfp_capture_once PRIVATE gxfp)
++
++target_compile_options(gxfp_capture_once PRIVATE -Wall -Wextra -Wpedantic)
++
+ add_executable(gxfp_recovery
+ 		demos/recovery/main.c
+ )
+@@ -65,6 +71,4 @@ target_link_libraries(gxfp_recovery PRIVATE gxfp)
+ 
+ target_compile_options(gxfp_recovery PRIVATE -Wall -Wextra -Wpedantic)
+ 
+-target_link_libraries(gxfp PUBLIC MbedTLS::mbedtls)
+-target_link_libraries(gxfp_capture PRIVATE MbedTLS::mbedtls)
+-target_link_libraries(gxfp_recovery PRIVATE MbedTLS::mbedtls)
++target_link_libraries(gxfp PUBLIC mbedtls mbedx509 mbedcrypto)
+diff --git a/src/algo/payload/provision.c b/src/algo/payload/provision.c
+index 667b473..dff4b1f 100644
+--- a/src/algo/payload/provision.c
++++ b/src/algo/payload/provision.c
+@@ -122,7 +122,7 @@ int gxfp_payload_calc_seed16(const uint8_t *psk, size_t psk_len, uint8_t out_see
+         off += 4;
+     }
+ 
+-    if (mbedtls_sha256(buf, off, digest, 0) != 0) {
++    if (mbedtls_sha256_ret(buf, off, digest, 0) != 0) {
+         free(buf);
+         return -EIO;
+     }
+@@ -278,7 +278,7 @@ int gxfp_payload_build_bb020003_hash_prefix(const uint8_t *bb010003_wb_data,
+     if (out_hash_len == 0 || out_hash_len > sizeof(digest))
+         return -EINVAL;
+ 
+-    if (mbedtls_sha512(bb010003_wb_data, bb010003_wb_data_len, digest, 1) != 0)
++    if (mbedtls_sha512_ret(bb010003_wb_data, bb010003_wb_data_len, digest, 1) != 0)
+         return -EIO;
+ 
+     memcpy(out_hash, digest, out_hash_len);
+diff --git a/src/tls/tls_engine_mbedtls.c b/src/tls/tls_engine_mbedtls.c
+index 45412f0..75f7d9d 100644
+--- a/src/tls/tls_engine_mbedtls.c
++++ b/src/tls/tls_engine_mbedtls.c
+@@ -119,8 +119,12 @@ static int setup_ssl(struct gxfp_tls_engine *e, const uint8_t *psk, size_t psk_l
+ 		return -EIO;
+ 
+ 	mbedtls_ssl_conf_rng(&e->conf, mbedtls_ctr_drbg_random, &e->ctr_drbg);
+-	mbedtls_ssl_conf_min_tls_version(&e->conf, MBEDTLS_SSL_VERSION_TLS1_2);
+-	mbedtls_ssl_conf_max_tls_version(&e->conf, MBEDTLS_SSL_VERSION_TLS1_2);
++	mbedtls_ssl_conf_min_version(&e->conf,
++				     MBEDTLS_SSL_MAJOR_VERSION_3,
++				     MBEDTLS_SSL_MINOR_VERSION_3);
++	mbedtls_ssl_conf_max_version(&e->conf,
++				     MBEDTLS_SSL_MAJOR_VERSION_3,
++				     MBEDTLS_SSL_MINOR_VERSION_3);
+ 
+ 	r = mbedtls_ssl_conf_psk(&e->conf, psk, psk_len,
+ 				 (const unsigned char *)GXFP5130_PSK_IDENTITY,
+diff --git a/demos/capture_once/main.c b/demos/capture_once/main.c
+new file mode 100644
+index 0000000..e24795b
+--- /dev/null
++++ b/demos/capture_once/main.c
+@@ -0,0 +1,236 @@
++#define _GNU_SOURCE
++
++#include "gxfp/algo/common.h"
++#include "gxfp/flow/session.h"
++#include "gxfp/tls/tls_service.h"
++
++#include <errno.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++static int handle_session_error(const struct gxfp_session_events *ev)
++{
++	if (!ev || !ev->session_error)
++		return 0;
++
++	fprintf(stderr, "session error: %s (%d)\n", ev->error_msg, ev->error_code);
++	return ev->error_code ? ev->error_code : -EIO;
++}
++
++static int wait_until(struct gxfp_session *s,
++		      int timeout_ms,
++		      int (*done)(const struct gxfp_session_events *, void *),
++		      void *done_ctx)
++{
++	int64_t start_ms = gxfp_monotonic_ms();
++	struct gxfp_session_events ev;
++
++	for (;;) {
++		int pr;
++		int er;
++		int64_t now_ms = gxfp_monotonic_ms();
++
++		if (timeout_ms > 0 && (now_ms - start_ms) > timeout_ms)
++			return -ETIMEDOUT;
++
++		gxfp_session_events_clear(&ev);
++		gxfp_session_pump(s, 0, &ev);
++		er = handle_session_error(&ev);
++		if (er < 0)
++			return er;
++		if (done(&ev, done_ctx))
++			return 0;
++
++		pr = gxfp_session_poll_readable(s, 50);
++		if (pr == 0 || pr == -EAGAIN) {
++			gxfp_session_events_clear(&ev);
++			gxfp_session_on_fd(s, GXFP_SESSION_IO_IN, 0, &ev);
++			er = handle_session_error(&ev);
++			if (er < 0)
++				return er;
++			if (done(&ev, done_ctx))
++				return 0;
++		} else {
++			return pr;
++		}
++	}
++}
++
++static int done_activate(const struct gxfp_session_events *ev, void *ctx)
++{
++	(void)ctx;
++	return ev && ev->activate_complete;
++}
++
++static int done_finger_on(const struct gxfp_session_events *ev, void *ctx)
++{
++	(void)ctx;
++	return ev && ev->finger_status_changed && ev->finger_present;
++}
++
++static int done_finger_off(const struct gxfp_session_events *ev, void *ctx)
++{
++	(void)ctx;
++	return ev && ev->finger_status_changed && !ev->finger_present;
++}
++
++static int done_image(const struct gxfp_session_events *ev, void *ctx)
++{
++	(void)ctx;
++	return ev && ev->image_ready;
++}
++
++static int write_pgm_u16(const char *path, const struct gxfp_decoded_image *img)
++{
++	FILE *f;
++
++	if (!path || !img || !img->pixels || img->rows <= 0 || img->cols <= 0)
++		return -EINVAL;
++
++	f = fopen(path, "wb");
++	if (!f)
++		return -errno;
++
++	if (fprintf(f, "P5\n%d %d\n4095\n", img->cols, img->rows) < 0) {
++		fclose(f);
++		return -EIO;
++	}
++
++	for (int r = 0; r < img->rows; r++) {
++		for (int c = 0; c < img->cols; c++) {
++			uint16_t v = img->pixels[r * img->cols + c];
++			uint8_t be[2] = { (uint8_t)((v >> 8) & 0xff), (uint8_t)(v & 0xff) };
++			if (fwrite(be, 1, sizeof(be), f) != sizeof(be)) {
++				fclose(f);
++				return -EIO;
++			}
++		}
++	}
++
++	fclose(f);
++	return 0;
++}
++
++static void usage(const char *argv0)
++{
++	fprintf(stderr,
++		"usage: %s --psk-raw32 <path> --out <finger.pgm> [--timeout-ms <ms>]\n",
++		argv0);
++}
++
++int main(int argc, char **argv)
++{
++	const char *psk_file = NULL;
++	const char *out_file = NULL;
++	uint32_t timeout_ms = 20000;
++	uint8_t *psk = NULL;
++	size_t psk_len = 0;
++	struct gxfp_session sess;
++	struct gxfp_session_events ev;
++	struct gxfp_decoded_image img;
++	int rc;
++
++	for (int i = 1; i < argc; i++) {
++		if (strcmp(argv[i], "--psk-raw32") == 0 && i + 1 < argc) {
++			psk_file = argv[++i];
++		} else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
++			out_file = argv[++i];
++		} else if (strcmp(argv[i], "--timeout-ms") == 0 && i + 1 < argc) {
++			timeout_ms = (uint32_t)strtoul(argv[++i], NULL, 10);
++		} else {
++			usage(argv[0]);
++			return 2;
++		}
++	}
++
++	if (!psk_file || !out_file) {
++		usage(argv[0]);
++		return 2;
++	}
++
++	rc = gxfp_read_file_all(psk_file, &psk, &psk_len);
++	if (rc < 0) {
++		fprintf(stderr, "read PSK '%s' failed: %s\n", psk_file, strerror(-rc));
++		return 1;
++	}
++
++	gxfp_session_init(&sess);
++	rc = gxfp_session_open(&sess, "/dev/gxfp", psk, psk_len, 0, NULL, 0);
++	free(psk);
++	psk = NULL;
++	if (rc < 0) {
++		fprintf(stderr, "session_open failed: %s\n", strerror(-rc));
++		gxfp_session_dispose(&sess);
++		return 1;
++	}
++
++	gxfp_session_events_clear(&ev);
++	rc = gxfp_session_activate(&sess, 0, &ev);
++	if (rc < 0 || handle_session_error(&ev) < 0) {
++		gxfp_session_dispose(&sess);
++		return 1;
++	}
++
++	rc = wait_until(&sess, (int)timeout_ms, done_activate, NULL);
++	if (rc < 0) {
++		char tls_err[128];
++		fprintf(stderr, "connect failed: %s\n",
++			gxfp_tls_service_strerror(rc, tls_err, sizeof(tls_err)));
++		gxfp_session_dispose(&sess);
++		return 1;
++	}
++
++	gxfp_session_events_clear(&ev);
++	gxfp_session_change_state(&sess, GXFP_SESSION_STATE_AWAIT_FINGER_ON, &ev);
++	rc = handle_session_error(&ev);
++	if (rc < 0)
++		goto out_fail;
++
++	fprintf(stderr, "waiting finger down\n");
++	rc = wait_until(&sess, (int)timeout_ms, done_finger_on, NULL);
++	if (rc < 0) {
++		fprintf(stderr, "finger down: %s\n", strerror(-rc));
++		goto out_fail;
++	}
++
++	gxfp_session_events_clear(&ev);
++	gxfp_session_change_state(&sess, GXFP_SESSION_STATE_CAPTURE, &ev);
++	rc = handle_session_error(&ev);
++	if (rc < 0)
++		goto out_fail;
++
++	rc = wait_until(&sess, (int)timeout_ms, done_image, NULL);
++	if (rc < 0) {
++		fprintf(stderr, "capture: %s\n", strerror(-rc));
++		goto out_fail;
++	}
++
++	memset(&img, 0, sizeof(img));
++	rc = gxfp_session_take_image(&sess, &img);
++	if (rc < 0) {
++		fprintf(stderr, "take_image: %s\n", strerror(-rc));
++		goto out_fail;
++	}
++
++	rc = write_pgm_u16(out_file, &img);
++	gxfp_decoded_image_free(&img);
++	if (rc < 0) {
++		fprintf(stderr, "write image: %s\n", strerror(-rc));
++		goto out_fail;
++	}
++
++	gxfp_session_events_clear(&ev);
++	gxfp_session_change_state(&sess, GXFP_SESSION_STATE_AWAIT_FINGER_OFF, &ev);
++	(void)handle_session_error(&ev);
++	(void)wait_until(&sess, 4000, done_finger_off, NULL);
++
++	fprintf(stderr, "capture ok -> %s\n", out_file);
++	gxfp_session_dispose(&sess);
++	return 0;
++
++out_fail:
++	gxfp_session_dispose(&sess);
++	return 1;
++}

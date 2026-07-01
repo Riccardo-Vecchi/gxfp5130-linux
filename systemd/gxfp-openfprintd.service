@@ -1,0 +1,18 @@
+[Unit]
+Description=GXFP fingerprint backend daemon for open-fprintd
+After=systemd-modules-load.service dbus.service open-fprintd.service
+Requires=open-fprintd.service
+
+[Service]
+Type=simple
+Environment=GXFP_PSK=/var/lib/open-fprintd/gxfp/psk-new-raw32.bin
+Environment=GXFP_CAPTURE_HELPER=/usr/local/bin/gxfp_capture_once
+Environment=RUST_LOG=gxfp_openfprintd=info
+ExecStartPre=/sbin/modprobe gxfp
+ExecStartPre=/usr/local/libexec/gxfp-ensure-device
+ExecStart=/usr/local/bin/gxfp-openfprintd
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

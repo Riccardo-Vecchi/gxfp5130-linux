@@ -60,6 +60,9 @@ compatibility report issue with the details listed in
 
 ## Why This Repository Exists
 
+Switching to Linux and losing fingerprint login was the kind of small
+annoyance that turns into a weekend project.
+
 The upstream projects below solve the kernel transport, Goodix MOC protocol,
 matching, and fprintd-compatible frontend separately. This repository packages
 the missing integration layer needed for a desktop login workflow on the tested
@@ -89,6 +92,10 @@ Included:
 - `scripts/` - fetch/install helpers, DKMS config and service glue.
 - `systemd/` - backend service unit.
 - `docs/` - provisioning, debug and tested-host notes.
+- `CONTRIBUTING.md` - compatibility-reporting and contribution guidance.
+- `UPSTREAMS.md` - pinned upstream revisions and provenance notes.
+- `LICENSES-GPL-2.0.txt`, `LICENSES-LGPL-2.1.txt` - license texts for the
+  integration code and matcher crate.
 - `gxfp-backup/`, `gxfp-reprovision/` - local-only directories for private
   material; their contents are ignored by Git.
 
@@ -96,7 +103,7 @@ Not vendored:
 
 - Full `gxfp_linux_driver` and `gxfpmoc` source trees. The installer fetches
   pinned upstream revisions instead, keeping provenance clear.
-- Sensitive material such as PSKs, factory blobs, captures and templates. See
+- Sensitive material (PSKs, factory blobs, captures, templates) — see
   [Security Notes](#security-notes) for the full list and why.
 
 ## Install Outline
@@ -177,8 +184,8 @@ Linux capture started working only after invasive reprovisioning with a new PSK.
 That may invalidate Windows-side fingerprint enrollment and can require
 re-enrollment in Windows.
 
-Provisioning notes live in [`docs/provisioning.md`](docs/provisioning.md). This
-repository intentionally does not include any PSK or provisioning blob.
+Provisioning notes live in [`docs/provisioning.md`](docs/provisioning.md). See
+[Security Notes](#security-notes) for what must stay private.
 
 ## Security Notes
 
@@ -236,5 +243,3 @@ and is LGPL-2.1. See [`LICENSES-LGPL-2.1.txt`](LICENSES-LGPL-2.1.txt).
 - Tested on one Huawei MateBook X Pro 2024 system, not a broad device matrix.
 - Provisioning remains intentionally manual because it changes persistent sensor
   state.
-- `gxfp_linux_driver` and `gxfpmoc` are fetched from their original repositories
-  instead of fully vendored here to keep licensing and provenance clear.

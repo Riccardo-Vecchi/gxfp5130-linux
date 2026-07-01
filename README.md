@@ -77,7 +77,9 @@ GXFP5130 laptop. Background discussion and early GXFP5130 clues are available in
 
 ## What Is Included, And Why
 
-This repository intentionally does not vendor everything.
+This repository intentionally does not vendor everything; in other words, it
+does not copy every upstream source tree into this repo. Some dependencies are
+fetched fresh at install time instead.
 
 Included:
 
@@ -93,10 +95,9 @@ Included:
 Not vendored:
 
 - Full `gxfp_linux_driver` and `gxfpmoc` source trees. The installer fetches
-  pinned upstream revisions instead. This keeps provenance clear and avoids
-  republishing large upstream code without complete top-level licensing context.
-- Any PSK, factory blob, trace, provisioning log, raw PGM capture or enrolled
-  template.
+  pinned upstream revisions instead, keeping provenance clear.
+- Sensitive material such as PSKs, factory blobs, captures and templates. See
+  [Security Notes](#security-notes) for the full list and why.
 
 ## Install Outline
 
@@ -125,6 +126,9 @@ Make sure your PSK exists at:
 ```text
 /var/lib/open-fprintd/gxfp/psk-new-raw32.bin
 ```
+
+If you do not have one yet, see [Provisioning And PSK](#provisioning-and-psk).
+Most laptops need a one-time PSK reprovisioning before capture works.
 
 Then enroll:
 

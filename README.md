@@ -53,6 +53,7 @@ and a practical starting point for nearby Goodix GXFP5130 devices.
 | Laptop | Sensor ACPI ID | Firmware | OS | Kernel | Status |
 | --- | --- | --- | --- | --- | --- |
 | Huawei MateBook X Pro 2024 | `GXFP5130:00` | `GF_GCC_EC_20068` | Zorin OS 18.1 | `7.0.14` | enroll + verify |
+| Huawei MateBook 14 (Core Ultra) | `GXFP5130:00` | `GF_GCC_EC_20068` | Ubuntu 26.04 LTS | `7.0.0-27` | enroll + verify |
 
 Got it working on different hardware? Open a PR adding a row, or open a
 compatibility report issue with the details listed in

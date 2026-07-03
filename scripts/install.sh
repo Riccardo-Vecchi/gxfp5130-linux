@@ -42,10 +42,11 @@ cmake --build "$moc_src/build" --target gxfp_capture_once gxfp_psk_tool -j"$(npr
 install -m 0755 "$moc_src/build/gxfp_capture_once" /usr/local/bin/gxfp_capture_once
 install -m 0755 "$moc_src/build/gxfp_psk_tool" /usr/local/bin/gxfp_psk_tool
 
-python3 "$open_fprintd_src/setup.py" install --force --prefix=/usr --root=/
+( cd "$open_fprintd_src" && python3 setup.py install --force --prefix=/usr --root=/ )
 install -m 0644 "$open_fprintd_src/dbus_service/net.reactivated.Fprint.conf" /etc/dbus-1/system.d/net.reactivated.Fprint.conf
 install -m 0644 "$open_fprintd_src/dbus_service/net.reactivated.Fprint.service" /usr/share/dbus-1/system-services/net.reactivated.Fprint.service
 install -m 0644 "$open_fprintd_src/debian/open-fprintd.service" /etc/systemd/system/open-fprintd.service
+install -m 0644 "$root/dbus/io.github.uunicorn.Fprint.conf" /etc/dbus-1/system.d/io.github.uunicorn.Fprint.conf
 
 cargo build --release --manifest-path "$root/openfprintd-backend/Cargo.toml" --bins
 install -m 0755 "$root/openfprintd-backend/target/release/gxfp-openfprintd" /usr/local/bin/gxfp-openfprintd
